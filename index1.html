@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交通費精算</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
+
+@media screen{
+header{background:#2b6cb0;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+header h1{font-size:1.1rem;font-weight:700;letter-spacing:.03em}
+.container{max-width:780px;margin:0 auto;padding:20px 16px}
+.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:18px}
+.card-title{font-size:.78rem;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+label{display:block;font-size:.76rem;font-weight:600;color:#4a5568;margin-bottom:3px}
+input,select{width:100%;padding:8px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.93rem;color:#1a202c;background:#f7fafc;transition:border-color .15s;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:#2b6cb0;background:#fff}
+.fare-wrap{display:flex;align-items:center;gap:6px}
+.fare-wrap input{flex:1}
+.fare-wrap span{color:#718096;font-size:.85rem;white-space:nowrap}
+.fare-auto-badge{font-size:.7rem;padding:2px 7px;border-radius:10px;background:#c6f6d5;color:#276749;font-weight:700;white-space:nowrap;display:none}
+.fare-auto-badge.show{display:inline-block}
+.fare-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn-primary{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:14px;padding:11px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-size:.93rem;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-primary:hover{background:#2c5282}
+.summary-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.month-filter{padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.85rem;color:#2d3748;background:#f7fafc;cursor:pointer}
+.total-badge{background:#ebf8ff;color:#2b6cb0;font-weight:700;font-size:.95rem;padding:6px 14px;border-radius:20px;border:1.5px solid #bee3f8;white-space:nowrap}
+.empty{text-align:center;color:#a0aec0;padding:36px 0;font-size:.88rem}
+.expense-item{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #f0f4f8}
+.expense-item:last-child{border-bottom:none}
+.exp-date{font-size:.73rem;color:#718096;white-space:nowrap;padding-top:2px;min-width:44px}
+.exp-body{flex:1;min-width:0}
+.exp-route{font-weight:600;font-size:.92rem;color:#1a202c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-route .arr{color:#2b6cb0;margin:0 3px}
+.type-badge{font-size:.68rem;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:5px;vertical-align:middle}
+.t-train{background:#e9d8fd;color:#553c9a}
+.t-bus{background:#c6f6d5;color:#276749}
+.t-taxi{background:#feebc8;color:#7b341e}
+.t-other{background:#e2e8f0;color:#4a5568}
+.exp-memo{font-size:.74rem;color:#718096;margin-top:2px}
+.exp-fare{font-weight:700;font-size:.95rem;color:#2b6cb0;white-space:nowrap;padding-top:1px}
+.item-actions{display:flex;flex-direction:column;gap:4px;align-self:center}
+.btn-dup{background:#ebf8ff;border:1px solid #bee3f8;color:#2b6cb0;font-size:.7rem;font-weight:700;padding:3px 7px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:background .15s}
+.btn-dup:hover{background:#bee3f8}
+.btn-del{background:none;border:none;cursor:pointer;color:#cbd5e0;font-size:.95rem;padding:3px 4px;border-radius:4px;transition:color .15s}
+.btn-del:hover{color:#e53e3e}
+.actions{display:flex;gap:8px;margin-top:4px}
+.btn-sec{flex:1;padding:10px;background:#fff;border:1.5px solid #bee3f8;color:#2b6cb0;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-sec:hover{background:#ebf8ff}
+.btn-danger{padding:10px 16px;background:#fff;border:1.5px solid #fed7d7;color:#e53e3e;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-danger:hover{background:#fff5f5}
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #bee3f8;border-radius:8px;z-index:100;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px}
+.ac-item{padding:9px 12px;font-size:.88rem;cursor:pointer;border-bottom:1px solid #f0f4f8;display:flex;justify-content:space-between;align-items:center}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover{background:#ebf8ff;color:#2b6cb0}
+.ac-sub{font-size:.72rem;color:#a0aec0}
+.fare-hint{font-size:.75rem;color:#276749;background:#f0fff4;border:1px solid #c6f6d5;border-radius:6px;padding:6px 10px;margin-top:6px;display:none}
+.fare-hint.show{display:block}
+.fare-hint.warn{background:#fffbeb;border-color:#f6e05e;color:#744210}
+.fare-hint a{color:#2b6cb0;font-weight:700;text-decoration:none}
+.fare-hint a:hover{text-decoration:underline}
+/* 複製通知バナー */
+.dup-banner{background:#ebf8ff;border:1.5px solid #bee3f8;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.83rem;color:#2b6cb0;font-weight:600;display:none;align-items:center;gap:8px}
+.dup-banner.show{display:flex}
+/* モーダル */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:14px;padding:28px;width:360px;max-width:90vw}
+.modal h3{font-size:1rem;font-weight:700;color:#2d3748;margin-bottom:18px}
+.modal label{font-size:.8rem;font-weight:600;color:#4a5568;margin-bottom:3px;display:block}
+.modal input{width:100%;margin-bottom:12px}
+.modal-actions{display:flex;gap:8px;margin-top:4px}
+.modal-actions button{flex:1;padding:10px;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer}
+.btn-modal-ok{background:#2b6cb0;color:#fff;border:none}
+.btn-modal-ok:hover{background:#2c5282}
+.btn-modal-cancel{background:#fff;color:#718096;border:1.5px solid #e2e8f0}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#2d3748;color:#fff;padding:10px 20px;border-radius:8px;font-size:.83rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:520px){.form-grid{grid-template-columns:1fr}.full{grid-column:1}}
+}
+
+@media print{
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{background:#fff;font-family:'Hiragino Sans',sans-serif;font-size:10pt;color:#000}
+header,.container,.toast,.modal-bg{display:none!important}
+.print-view{display:block!important;width:100%;max-width:190mm;margin:0 auto;padding:10mm 0}
+.pv-company{font-size:9pt;color:#555;margin-bottom:2mm}
+.pv-title{font-size:18pt;font-weight:700;color:#1a3a6b;margin-bottom:6mm;border-bottom:2px solid #1a3a6b;padding-bottom:3mm}
+.pv-meta{display:grid;grid-template-columns:1fr 1fr;gap:2mm;margin-bottom:6mm;font-size:9pt}
+.pv-meta-item{display:flex;gap:2mm}
+.pv-meta-item .mk{font-weight:700;color:#555;white-space:nowrap}
+table{width:100%;border-collapse:collapse;margin-bottom:6mm;font-size:9pt}
+th{background:#1a3a6b;color:#fff;padding:3mm 4mm;text-align:left;font-weight:700}
+td{padding:2.5mm 4mm;border-bottom:1px solid #e0e0e0;vertical-align:top}
+tr:nth-child(even) td{background:#f5f8ff}
+.td-num{text-align:center;color:#718096;width:8mm}
+.td-fare{text-align:right;font-weight:600;color:#1a3a6b}
+.td-total{text-align:right;font-weight:700;font-size:11pt;color:#1a3a6b}
+tfoot td{border-top:2px solid #1a3a6b;border-bottom:none;background:#fff!important}
+.pv-sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6mm;margin-top:10mm}
+.pv-sign-box{border:1px solid #aaa;border-radius:3mm;padding:3mm;min-height:20mm}
+.pv-sign-box .sk{font-size:8pt;color:#718096;margin-bottom:2mm;font-weight:700}
+.pv-footer{text-align:right;font-size:8pt;color:#aaa;margin-top:6mm}
+}
+@media screen{.print-view{display:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <span>🚃</span>
+  <h1>交通費精算</h1>
+</header>
+
+<div class="container">
+  <div class="card">
+    <div class="card-title">新規追加</div>
+    <!-- 複製通知バナー -->
+    <div class="dup-banner" id="dup-banner">
+      📋 前回の記録を複製しました。日付を確認して「追加する」を押してください。
+    </div>
+    <div class="form-grid">
+      <div>
+        <label>日付</label>
+        <input type="date" id="f-date">
+      </div>
+      <div>
+        <label>交通手段</label>
+        <select id="f-type">
+          <option value="train">🚃 電車</option>
+          <option value="bus">🚌 バス</option>
+          <option value="taxi">🚕 タクシー</option>
+          <option value="other">🚶 その他</option>
+        </select>
+      </div>
+      <div class="full">
+        <label>出発地</label>
+        <div class="ac-wrap">
+          <input type="text" id="f-from" placeholder="駅名を入力（例：渋谷）" autocomplete="off">
+          <div class="ac-list" id="ac-from" style="display:none"></div>
+        </div>
+      </div>
+      <div class="full">
+        <label>目的地</label>
+        <div class="ac-wrap">
+          <input type="text" id="f-to" placeholder="駅名を入力（例：新宿）" autocomplete="off">
+          <div class="ac-list" id="ac-to" style="display:none"></div>
+        </div>
+        <div class="fare-hint" id="fare-hint"></div>
+      </div>
+      <div class="full">
+        <label>運賃（IC）</label>
+        <div class="fare-row">
+          <div class="fare-wrap" style="flex:1">
+            <input type="number" id="f-fare" placeholder="0" min="0" step="1">
+            <span>円</span>
+          </div>
+          <span class="fare-auto-badge" id="fare-badge">自動取得</span>
+        </div>
+      </div>
+      <div class="full">
+        <label>備考（任意）</label>
+        <input type="text" id="f-memo" placeholder="訪問先・用件など">
+      </div>
+    </div>
+    <button class="btn-primary" onclick="addEntry()">＋ 追加する</button>
+  </div>
+
+  <div class="card">
+    <div class="summary-bar">
+      <div class="card-title" style="margin:0">明細一覧</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <select class="month-filter" id="month-filter" onchange="render()"></select>
+        <div class="total-badge">合計 <span id="total">¥0</span></div>
+      </div>
+    </div>
+    <div id="list"><p class="empty">まだ明細がありません</p></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-sec" onclick="openPrintModal()">🖨️ PDF印刷</button>
+    <button class="btn-sec" onclick="exportCSV()">📥 CSV</button>
+    <button class="btn-danger" onclick="clearAll()">🗑</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal">
+    <h3>🖨️ PDF印刷設定</h3>
+    <label>会社名</label>
+    <input type="text" id="p-company" placeholder="株式会社○○">
+    <label>部署名</label>
+    <input type="text" id="p-dept" placeholder="営業部">
+    <label>申請者名</label>
+    <input type="text" id="p-name" placeholder="山田 太郎">
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="document.getElementById('modal').style.display='none'">キャンセル</button>
+      <button class="btn-modal-ok" onclick="doPrint()">印刷プレビュー</button>
+    </div>
+  </div>
+</div>
+
+<div class="print-view" id="print-view"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   路線データベース
+   ============================================================ */
+const LINES = {
+  '山手線':{ t:'JR', loop:34.5, s:[
+    ['品川',0],['大崎',1.8],['五反田',3.0],['目黒',4.1],['恵比寿',5.5],
+    ['渋谷',6.9],['原宿',8.4],['代々木',9.3],['新宿',10.3],['新大久保',11.3],
+    ['高田馬場',12.3],['目白',13.4],['池袋',14.5],['大塚',15.8],['巣鴨',16.7],
+    ['駒込',17.6],['田端',18.9],['西日暮里',19.7],['日暮里',20.5],['鶯谷',21.7],
+    ['上野',22.8],['御徒町',23.5],['秋葉原',24.4],['神田',25.5],['東京',26.5],
+    ['有楽町',27.2],['新橋',28.2],['浜松町',29.2],['田町',30.2],['高輪ゲートウェイ',31.5]
+  ]},
+  '中央線':{ t:'JR', s:[
+    ['東京',0],['神田',0.9],['御茶ノ水',2.1],['水道橋',3.0],['飯田橋',4.1],
+    ['市ケ谷',5.0],['四ツ谷',6.2],['信濃町',7.5],['千駄ヶ谷',8.3],['代々木',9.2],
+    ['新宿',10.3],['大久保',11.6],['東中野',12.5],['中野',13.8],['高円寺',15.5],
+    ['阿佐ケ谷',16.7],['荻窪',18.0],['西荻窪',19.6],['吉祥寺',21.0],['三鷹',22.7],
+    ['武蔵境',24.7],['東小金井',26.1],['武蔵小金井',27.3],['国分寺',29.1],
+    ['西国分寺',30.3],['国立',31.8],['立川',33.7],['八王子',42.1]
+  ]},
+  '京浜東北線':{ t:'JR', s:[
+    ['大宮',0],['さいたま新都心',2.7],['与野',4.0],['北浦和',5.5],['浦和',7.0],
+    ['南浦和',9.0],['蕨',11.3],['西川口',13.2],['川口',15.0],['赤羽',18.0],
+    ['東十条',20.0],['王子',21.5],['上中里',22.7],['田端',23.9],['西日暮里',24.7],
+    ['日暮里',25.5],['鶯谷',26.7],['上野',27.8],['御徒町',28.5],['秋葉原',29.4],
+    ['神田',30.3],['東京',31.3],['有楽町',32.0],['新橋',33.0],['浜松町',34.0],
+    ['田町',35.0],['高輪ゲートウェイ',36.3],['品川',37.3],['大井町',39.5],
+    ['大森',41.5],['蒲田',43.9],['川崎',47.2],['横浜',55.5]
+  ]},
+  '東海道線':{ t:'JR', s:[
+    ['東京',0],['新橋',2.0],['品川',6.8],['川崎',18.0],['横浜',28.8],
+    ['大船',50.0],['藤沢',59.5],['茅ケ崎',68.0],['平塚',75.0],['小田原',102.4]
+  ]},
+  '銀座線':{ t:'metro', s:[
+    ['浅草',0],['田原町',0.7],['稲荷町',1.4],['上野',2.5],['上野広小路',3.1],
+    ['末広町',3.6],['神田',4.7],['三越前',5.6],['日本橋',6.3],['京橋',7.1],
+    ['銀座',7.7],['新橋',8.5],['虎ノ門',9.5],['溜池山王',10.3],['赤坂見附',11.0],
+    ['青山一丁目',11.9],['外苑前',12.6],['表参道',13.3],['渋谷',14.3]
+  ]},
+  '丸ノ内線':{ t:'metro', s:[
+    ['池袋',0],['新大塚',1.0],['茗荷谷',2.1],['後楽園',3.7],['本郷三丁目',4.6],
+    ['御茶ノ水',5.5],['淡路町',6.3],['大手町',7.1],['東京',7.9],['銀座',8.9],
+    ['霞ケ関',10.0],['国会議事堂前',10.7],['赤坂見附',11.5],['四ツ谷',12.7],
+    ['四谷三丁目',13.8],['新宿御苑前',14.5],['新宿三丁目',15.3],['新宿',16.1],
+    ['西新宿',16.9],['中野坂上',18.4],['荻窪',24.0]
+  ]},
+  '日比谷線':{ t:'metro', s:[
+    ['北千住',0],['南千住',1.2],['三ノ輪',2.3],['入谷',3.3],['上野',4.0],
+    ['仲御徒町',4.8],['秋葉原',5.8],['小伝馬町',6.6],['人形町',7.3],['茅場町',8.3],
+    ['八丁堀',9.3],['築地',10.1],['東銀座',10.7],['銀座',11.5],['日比谷',12.4],
+    ['霞ケ関',13.3],['神谷町',14.5],['六本木',15.4],['広尾',16.7],['恵比寿',17.8],
+    ['中目黒',20.3]
+  ]},
+  '東西線':{ t:'metro', s:[
+    ['中野',0],['落合',1.8],['高田馬場',3.4],['早稲田',4.7],['神楽坂',5.7],
+    ['飯田橋',6.7],['九段下',7.6],['竹橋',8.5],['大手町',9.2],['日本橋',10.2],
+    ['茅場町',11.1],['門前仲町',12.2],['木場',13.5],['東陽町',14.7],['南砂町',16.2],
+    ['西葛西',18.8],['葛西',20.1],['浦安',22.0],['西船橋',30.8]
+  ]},
+  '千代田線':{ t:'metro', s:[
+    ['代々木上原',0],['代々木公園',0.8],['明治神宮前',1.7],['表参道',2.7],
+    ['乃木坂',4.0],['赤坂',5.0],['国会議事堂前',6.0],['霞ケ関',7.0],['日比谷',8.1],
+    ['二重橋前',8.8],['大手町',9.8],['新御茶ノ水',11.0],['湯島',11.9],['根津',12.8],
+    ['千駄木',13.8],['西日暮里',14.7],['町屋',15.9],['北千住',17.9],['綾瀬',21.9]
+  ]},
+  '有楽町線':{ t:'metro', s:[
+    ['和光市',0],['小竹向原',6.2],['池袋',9.4],['護国寺',11.5],['江戸川橋',12.6],
+    ['飯田橋',13.7],['市ケ谷',14.5],['麹町',15.5],['永田町',16.3],['桜田門',17.3],
+    ['有楽町',18.0],['銀座一丁目',18.6],['新富町',19.4],['月島',20.9],['新木場',24.0]
+  ]},
+  '半蔵門線':{ t:'metro', s:[
+    ['渋谷',0],['表参道',1.3],['青山一丁目',2.3],['永田町',3.7],['半蔵門',4.4],
+    ['麹町',5.2],['九段下',6.1],['神保町',7.0],['大手町',8.2],['三越前',9.0],
+    ['水天宮前',10.1],['清澄白河',11.4],['住吉',12.7],['錦糸町',14.1],['押上',16.8]
+  ]},
+  '南北線':{ t:'metro', s:[
+    ['目黒',0],['白金台',1.3],['白金高輪',2.4],['麻布十番',3.9],['六本木一丁目',5.0],
+    ['溜池山王',6.2],['永田町',7.2],['四ツ谷',8.4],['市ケ谷',9.4],['飯田橋',10.5],
+    ['後楽園',12.1],['東大前',13.3],['本駒込',14.5],['駒込',15.8],['王子',18.9],
+    ['赤羽岩淵',22.5]
+  ]},
+  '副都心線':{ t:'metro', s:[
+    ['小竹向原',0],['池袋',3.2],['雑司が谷',4.3],['西早稲田',5.5],['東新宿',6.8],
+    ['新宿三丁目',7.9],['北参道',9.2],['明治神宮前',10.1],['渋谷',11.9]
+  ]},
+  '都営浅草線':{ t:'toei', s:[
+    ['西馬込',0],['馬込',1.1],['中延',2.4],['戸越',3.2],['五反田',4.4],
+    ['高輪台',5.4],['泉岳寺',6.4],['三田',7.3],['大門',8.4],['新橋',9.5],
+    ['東銀座',10.4],['宝町',11.3],['日本橋',12.1],['人形町',12.8],
+    ['浅草橋',14.5],['蔵前',15.2],['浅草',16.3],['押上',18.3]
+  ]},
+  '都営三田線':{ t:'toei', s:[
+    ['目黒',0],['白金台',1.2],['白金高輪',2.3],['三田',4.2],['芝公園',5.1],
+    ['御成門',5.9],['内幸町',6.6],['日比谷',7.3],['大手町',8.7],['神保町',9.7],
+    ['水道橋',10.6],['春日',11.6],['白山',12.7],['千石',13.8],['巣鴨',14.7],
+    ['新板橋',16.3],['板橋本町',18.1],['高島平',24.0],['西高島平',26.5]
+  ]},
+  '都営新宿線':{ t:'toei', s:[
+    ['新宿',0],['新宿三丁目',0.9],['曙橋',1.9],['市ケ谷',3.0],['九段下',3.9],
+    ['神保町',4.8],['小川町',5.7],['岩本町',6.8],['馬喰横山',7.5],['浜町',8.3],
+    ['森下',9.2],['菊川',10.1],['住吉',11.2],['西大島',12.2],['大島',13.2],
+    ['東大島',14.5],['船堀',16.5],['一之江',18.3],['本八幡',23.5]
+  ]},
+  '都営大江戸線':{ t:'toei', s:[
+    ['光が丘',0],['練馬',4.3],['新江古田',6.1],['落合南長崎',7.6],['中井',8.8],
+    ['東中野',9.8],['中野坂上',10.8],['都庁前',13.0],['新宿',14.0],['代々木',15.0],
+    ['国立競技場',16.0],['青山一丁目',17.2],['六本木',18.2],['麻布十番',19.1],
+    ['赤羽橋',20.0],['大門',21.0],['汐留',22.2],['築地市場',23.0],
+    ['月島',23.9],['勝どき',24.8],['清澄白河',26.5],['森下',27.4],
+    ['両国',28.6],['蔵前',29.7],['新御徒町',30.7],['上野御徒町',31.7],
+    ['本郷三丁目',32.5],['春日',33.5],['飯田橋',34.3],['牛込神楽坂',35.4],
+    ['西新宿五丁目',38.3]
+  ]}
+};
+
+const STATION_INDEX = {};
+for (const [line, data] of Object.entries(LINES)) {
+  for (const [name, km] of data.s) {
+    if (!STATION_INDEX[name]) STATION_INDEX[name] = [];
+    STATION_INDEX[name].push({ line, km, type: data.t });
+  }
+}
+
+function jrIcFare(km) {
+  const t=[[3,133],[6,143],[10,165],[15,187],[20,220],[25,242],[30,275],[35,308],[40,341],[45,374],[50,407],[60,484],[70,561],[80,638],[90,715],[100,792]];
+  for(const[m,f]of t)if(km<=m)return f; return 869;
+}
+function metroIcFare(km){ if(km<=6)return 178;if(km<=11)return 209;if(km<=19)return 241;if(km<=27)return 273;return 304; }
+function toeiIcFare(km){ if(km<=5)return 178;if(km<=10)return 220;if(km<=15)return 263;return 304; }
+
+function calcAutoFare(fromName, toName) {
+  const fromE=STATION_INDEX[fromName], toE=STATION_INDEX[toName];
+  if(!fromE||!toE) return null;
+  let best=null;
+  for(const f of fromE){
+    for(const t of toE){
+      if(f.line!==t.line) continue;
+      const ld=LINES[f.line];
+      let km=Math.abs(f.km-t.km);
+      if(ld.loop) km=Math.min(km,ld.loop-km);
+      const fare=f.type==='JR'?jrIcFare(km):f.type==='metro'?metroIcFare(km):toeiIcFare(km);
+      if(!best||fare<best.fare) best={fare,line:f.line,km:km.toFixed(1)};
+    }
+  }
+  return best;
+}
+
+/* ============================================================
+   データ
+   ============================================================ */
+const SK='koutsuhi_v2';
+let entries=[];
+function load(){ try{entries=JSON.parse(localStorage.getItem(SK))||[];}catch{entries=[];} }
+function save(){ localStorage.setItem(SK,JSON.stringify(entries)); }
+
+/* ============================================================
+   複製機能
+   ============================================================ */
+function duplicateEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+
+  // 今日の日付をセット、他は複製元の値
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-type').value = e.type;
+  document.getElementById('f-from').value = e.from;
+  document.getElementById('f-to').value   = e.to;
+  document.getElementById('f-fare').value = e.fare;
+  document.getElementById('f-memo').value = e.memo || '';
+
+  // 複製バッジ表示
+  document.getElementById('fare-badge').classList.add('show');
+  document.getElementById('fare-hint').textContent =
+    `🔄 複製元：${e.from} → ${e.to}（¥${e.fare.toLocaleString()}）`;
+  document.getElementById('fare-hint').classList.add('show');
+
+  // 複製通知バナー表示
+  const banner = document.getElementById('dup-banner');
+  banner.classList.add('show');
+
+  // fromStation / toStation もセット（自動計算用）
+  fromStation = STATION_INDEX[e.from] ? e.from : null;
+  toStation   = STATION_INDEX[e.to]   ? e.to   : null;
+
+  // フォームまでスクロール
+  document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast(`「${e.from} → ${e.to}」を複製しました`);
+}
+
+/* ============================================================
+   オートコンプリート
+   ============================================================ */
+let fromStation=null, toStation=null;
+
+function setupAC(inputId, listId, field) {
+  const inp=document.getElementById(inputId);
+  const lst=document.getElementById(listId);
+
+  inp.addEventListener('input', () => {
+    const q=inp.value.trim();
+    if(field==='from') fromStation=null; else toStation=null;
+    clearFareHint();
+    document.getElementById('dup-banner').classList.remove('show');
+    if(q.length<1){lst.style.display='none';return;}
+    const matches=Object.keys(STATION_INDEX).filter(n=>n.includes(q)).slice(0,10);
+    if(!matches.length){lst.style.display='none';return;}
+    lst.innerHTML=matches.map(n=>{
+      const lines=STATION_INDEX[n].map(e=>e.line).join('・');
+      return `<div class="ac-item" onmousedown="selectStation('${field}','${n}','${inputId}','${listId}')">${n}<span class="ac-sub">${lines}</span></div>`;
+    }).join('');
+    lst.style.display='block';
+  });
+
+  inp.addEventListener('blur', () => {
+    setTimeout(()=>{ lst.style.display='none'; },150);
+    const val=inp.value.trim();
+    if(STATION_INDEX[val]){
+      if(field==='from') fromStation=val; else toStation=val;
+      tryAutoFare();
+    }
+  });
+}
+
+function selectStation(field, name, inputId, listId) {
+  document.getElementById(inputId).value=name;
+  document.getElementById(listId).style.display='none';
+  if(field==='from') fromStation=name; else toStation=name;
+  document.getElementById('dup-banner').classList.remove('show');
+  tryAutoFare();
+}
+
+function tryAutoFare() {
+  const fName=fromStation||document.getElementById('f-from').value.trim();
+  const tName=toStation||document.getElementById('f-to').value.trim();
+  if(!fName||!tName) return;
+  if(!STATION_INDEX[fName]||!STATION_INDEX[tName]) return;
+  const result=calcAutoFare(fName,tName);
+  const fareInp=document.getElementById('f-fare');
+  const badge=document.getElementById('fare-badge');
+  const hint=document.getElementById('fare-hint');
+  if(result){
+    fareInp.value=result.fare;
+    badge.classList.add('show');
+    hint.className='fare-hint show';
+    hint.textContent=`🚉 ${result.line}（約${result.km}km）→ IC運賃 ¥${result.fare}`;
+  } else {
+    badge.classList.remove('show');
+    // Yahoo!乗換案内で検索するURLを生成
+    const yahooUrl=`https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(fName)}&to=${encodeURIComponent(tName)}&iccard=1`;
+    hint.className='fare-hint show warn';
+    hint.innerHTML=`⚠️ 乗り換えが必要な区間です。運賃を手動入力するか、<a href="${yahooUrl}" target="_blank" rel="noopener">Yahoo!乗換案内で確認 →</a>`;
+  }
+}
+
+function clearFareHint(){
+  document.getElementById('fare-badge').classList.remove('show');
+  document.getElementById('fare-hint').classList.remove('show');
+}
+
+/* ============================================================
+   追加・削除
+   ============================================================ */
+function addEntry() {
+  const date=document.getElementById('f-date').value;
+  const type=document.getElementById('f-type').value;
+  const from=document.getElementById('f-from').value.trim();
+  const to=document.getElementById('f-to').value.trim();
+  const fare=parseInt(document.getElementById('f-fare').value,10);
+  const memo=document.getElementById('f-memo').value.trim();
+  if(!date){showToast('日付を入力してください');return;}
+  if(!from){showToast('出発地を入力してください');return;}
+  if(!to){showToast('目的地を入力してください');return;}
+  if(!fare||fare<=0){showToast('運賃を入力してください');return;}
+  entries.push({id:Date.now(),date,type,from,to,fare,memo});
+  save(); renderMonthFilter(); render();
+  document.getElementById('f-from').value='';
+  document.getElementById('f-to').value='';
+  document.getElementById('f-fare').value='';
+  document.getElementById('f-memo').value='';
+  document.getElementById('dup-banner').classList.remove('show');
+  fromStation=null; toStation=null;
+  clearFareHint();
+  showToast('追加しました ✓');
+}
+
+function deleteEntry(id){
+  entries=entries.filter(e=>e.id!==id);
+  save(); renderMonthFilter(); render();
+}
+
+function clearAll(){
+  if(!entries.length) return;
+  if(!confirm('すべての明細を削除しますか？')) return;
+  entries=[]; save(); renderMonthFilter(); render();
+}
+
+/* ============================================================
+   月フィルター・描画
+   ============================================================ */
+function renderMonthFilter(){
+  const sel=document.getElementById('month-filter');
+  const months=[...new Set(entries.map(e=>e.date.slice(0,7)))].sort().reverse();
+  const cur=sel.value;
+  sel.innerHTML='<option value="">全期間</option>'+
+    months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','年')}月</option>`).join('');
+}
+
+function currentMonth(){ return document.getElementById('month-filter').value; }
+
+const TYPE_LABEL={train:'電車',bus:'バス',taxi:'タクシー',other:'その他'};
+const TYPE_CLS={train:'t-train',bus:'t-bus',taxi:'t-taxi',other:'t-other'};
+
+function render(){
+  const month=currentMonth();
+  const filtered=month?entries.filter(e=>e.date.startsWith(month)):entries;
+  const total=filtered.reduce((s,e)=>s+e.fare,0);
+  document.getElementById('total').textContent='¥'+total.toLocaleString();
+  const list=document.getElementById('list');
+  if(!filtered.length){list.innerHTML='<p class="empty">明細がありません</p>';return;}
+  const sorted=[...filtered].sort((a,b)=>a.date.localeCompare(b.date));
+  list.innerHTML=sorted.map(e=>`
+    <div class="expense-item">
+      <div class="exp-date">${fmtDate(e.date)}</div>
+      <div class="exp-body">
+        <div class="exp-route">${esc(e.from)}<span class="arr">→</span>${esc(e.to)}<span class="type-badge ${TYPE_CLS[e.type]}">${TYPE_LABEL[e.type]}</span></div>
+        ${e.memo?`<div class="exp-memo">${esc(e.memo)}</div>`:''}
+      </div>
+      <div class="exp-fare">¥${e.fare.toLocaleString()}</div>
+      <div class="item-actions">
+        <button class="btn-dup" onclick="duplicateEntry(${e.id})" title="この記録を複製">複製</button>
+        <button class="btn-del" onclick="deleteEntry(${e.id})" title="削除">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function fmtDate(d){const[,m,day]=d.split('-');return`${m}/${day}`;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ============================================================
+   PDF印刷
+   ============================================================ */
+function openPrintModal(){
+  if(!entries.length){showToast('明細がありません');return;}
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal(e){ if(e.target===document.getElementById('modal')) document.getElementById('modal').style.display='none'; }
+
+function doPrint(){
+  const company=document.getElementById('p-company').value||'（会社名未入力）';
+  const dept=document.getElementById('p-dept').value||'';
+  const name=document.getElementById('p-name').value||'（氏名未入力）';
+  document.getElementById('modal').style.display='none';
+  const month=currentMonth();
+  const filtered=month?entries.filter(e=>e.date.startsWith(month)):entries;
+  const sorted=[...filtered].sort((a,b)=>a.date.localeCompare(b.date));
+  const total=sorted.reduce((s,e)=>s+e.fare,0);
+  const periodLabel=month?`${month.replace('-','年')}月分`:'全期間';
+  const today=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
+  const rows=sorted.map((e,i)=>`
+    <tr>
+      <td class="td-num">${i+1}</td>
+      <td>${e.date}</td>
+      <td>${esc(e.from)}</td>
+      <td>${esc(e.to)}</td>
+      <td>${TYPE_LABEL[e.type]}</td>
+      <td>${esc(e.memo||'')}</td>
+      <td class="td-fare">¥${e.fare.toLocaleString()}</td>
+    </tr>`).join('');
+  document.getElementById('print-view').innerHTML=`
+    <div class="pv-company">${esc(company)}</div>
+    <div class="pv-title">交通費精算書</div>
+    <div class="pv-meta">
+      <div class="pv-meta-item"><span class="mk">申請者：</span>${esc(name)}${dept?'　'+esc(dept):''}</div>
+      <div class="pv-meta-item"><span class="mk">対象期間：</span>${periodLabel}</div>
+      <div class="pv-meta-item"><span class="mk">件数：</span>${sorted.length}件</div>
+      <div class="pv-meta-item"><span class="mk">申請日：</span>${today}</div>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:8mm">No.</th><th style="width:22mm">日付</th>
+        <th>出発地</th><th>目的地</th>
+        <th style="width:16mm">手段</th><th>備考</th>
+        <th style="width:18mm;text-align:right">運賃</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr>
+        <td colspan="6" style="text-align:right;font-weight:700">合計</td>
+        <td class="td-fare td-total">¥${total.toLocaleString()}</td>
+      </tr></tfoot>
+    </table>
+    <div class="pv-sign">
+      <div class="pv-sign-box"><div class="sk">申請者</div></div>
+      <div class="pv-sign-box"><div class="sk">確認</div></div>
+      <div class="pv-sign-box"><div class="sk">承認</div></div>
+    </div>
+    <div class="pv-footer">※ 本精算書はSuica（IC）運賃で計算しています</div>
+  `;
+  setTimeout(()=>window.print(),50);
+}
+
+/* ============================================================
+   CSV・トースト
+   ============================================================ */
+function exportCSV(){
+  const month=currentMonth();
+  const filtered=month?entries.filter(e=>e.date.startsWith(month)):entries;
+  if(!filtered.length){showToast('明細がありません');return;}
+  const BOM='﻿';
+  const head='日付,交通手段,出発地,目的地,運賃,備考\n';
+  const body=[...filtered].sort((a,b)=>a.date.localeCompare(b.date))
+    .map(e=>[e.date,TYPE_LABEL[e.type],e.from,e.to,e.fare,e.memo]
+      .map(v=>`"${String(v).replace(/"/g,'""')}"`)
+      .join(',')).join('\n');
+  const blob=new Blob([BOM+head+body],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=Object.assign(document.createElement('a'),{href:url,download:`交通費精算_${(month||'全期間').replace('-','')}.csv`});
+  a.click(); URL.revokeObjectURL(url);
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+(function init(){
+  document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+  load(); renderMonthFilter(); render();
+  setupAC('f-from','ac-from','from');
+  setupAC('f-to','ac-to','to');
+})();
+</script>
+</body>
+</html>
